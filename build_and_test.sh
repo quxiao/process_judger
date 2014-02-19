@@ -1,6 +1,8 @@
 #!/bin/sh
 
-function clear_and_exit
+WORK_BASE=`pwd`
+
+clear_and_exit ()
 {
     cd $WORK_BASE
     make clean
@@ -12,7 +14,6 @@ function clear_and_exit
 }
 
 
-WORK_BASE=`pwd`
 make clean && make
 if [ $? -ne 0 ]; then
     echo "make failed!"
