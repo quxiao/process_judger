@@ -1,4 +1,4 @@
-CC = gcc
+CC = g++
 FILES = test.cpp
 OUT_EXE = test_exe 
 OUT_DATA = output.data
