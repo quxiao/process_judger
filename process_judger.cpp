@@ -52,38 +52,31 @@ void printResult(int status, struct rusage childRusage);
  */
 int main (int argc, char** argv)
 {
-    if ( argc < 6 )
-    {
+    if (argc < 6) {
         printf("argument number error!\n");
         printf("usage: inputFile outputFile timeLimt(%d~%ds) memoryLimit(%d~%dMb) commandLine\n", 
                 MIN_TIME_LIMIT, MAX_TIME_LIMIT, MIN_MEM_LIMIT, MAX_MEM_LIMIT);
         return SYSTEM_ERROR;
     }
-    int timeLimit, memLimit, ret, tmpFd;
-    if ( isdigit(argv[3][0]) )
-        timeLimit = atoi(argv[3]);  
-    if ( isdigit(argv[4][0]) )
-        memLimit = atoi(argv[4]);
-    if ( timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT )
-    {
+    int timeLimit = 0, memLimit = 0, ret = 0, tmpFd = 0;
+    timeLimit = atoi(argv[3]);  
+    if (timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT) {
         printf("time limit argument error!(%d~%ds)\n", MIN_TIME_LIMIT, MAX_TIME_LIMIT);
         return SYSTEM_ERROR;
     }
-    if ( memLimit < MIN_MEM_LIMIT || memLimit > MAX_MEM_LIMIT )
-    {
+    memLimit = atoi(argv[4]);
+    if (memLimit < MIN_MEM_LIMIT || memLimit > MAX_MEM_LIMIT) {
         printf("memory limit argument error!(%d~%dMb)\n", MIN_MEM_LIMIT, MAX_MEM_LIMIT);
         return SYSTEM_ERROR;
     }
     memLimit = memLimit * 1024 * 1024;
 
-    if ( (tmpFd=open(argv[1], O_RDONLY)) == -1 )        //check input file
-    {
+    if ((tmpFd=open(argv[1], O_RDONLY)) == -1) {        //check input file
         printf("input file doesn't exist!\n");
         return SYSTEM_ERROR;
     }
     close(tmpFd);
-    if ( (tmpFd=open(argv[2], O_RDWR | O_CREAT)) == -1 ) //check output file
-    {
+    if ((tmpFd=open(argv[2], O_RDWR | O_CREAT)) == -1) { //check output file
         printf("output file can't be created!\n");
         return SYSTEM_ERROR;
     }
@@ -101,7 +94,7 @@ int main (int argc, char** argv)
 }
 
 
-int judge ( char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
+int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
 {
     int i;
 #ifdef  MY_DEBUG
@@ -119,13 +112,11 @@ int judge ( char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd
     struct rusage childRusage;
     int inFd, outFd;
 
-    if ( (pid=fork()) < 0 )
-    {
+    if ((pid=fork()) < 0) {
         printf("fork error!\n");
         return SYSTEM_ERROR;
     }
-    else if ( pid == 0 )        /*child process*/
-    {
+    else if ( pid == 0 ) {       /*child process*/
         getrlimit(RLIMIT_CPU, &tLimit);
         getrlimit(RLIMIT_AS, &mLimit);
         getrlimit(RLIMIT_NOFILE, &fileLimit);
@@ -141,19 +132,28 @@ int judge ( char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd
         cldLimit.rlim_cur = CHILD_NUM_LIMIT;
         fsizeLimit.rlim_cur = FILE_SIZE_LIMIT;
 
-        if ( setrlimit(RLIMIT_CPU, &tLimit) == -1 )     /*时间限制*/
+        if (setrlimit(RLIMIT_CPU, &tLimit) == -1) {     /*时间限制*/
             printf("setrlimit time limit error!\n");
-        if ( setrlimit(RLIMIT_AS, &mLimit) == -1 )      /*内存限制*/
+            return SYSTEM_ERROR;
+        }
+        if (setrlimit(RLIMIT_AS, &mLimit) == -1) {     /*内存限制*/
             printf("setrlimit memory limit error!\n");
-        if ( setrlimit(RLIMIT_NOFILE, &fileLimit) == -1 )
+            return SYSTEM_ERROR;
+        }
+        if (setrlimit(RLIMIT_NOFILE, &fileLimit) == -1) {
             printf("setrlimit file num limit error!\n");
-        if ( setrlimit(RLIMIT_NPROC, &cldLimit) == -1 )
+            return SYSTEM_ERROR;
+        }
+        if (setrlimit(RLIMIT_NPROC, &cldLimit) == -1) {
             printf("setrlimit child process num limit error!\n");
-        if ( setrlimit(RLIMIT_FSIZE, &fsizeLimit) == -1 ) 
+            return SYSTEM_ERROR;
+        }
+        if (setrlimit(RLIMIT_FSIZE, &fsizeLimit) == -1)  {
             printf("setrlimti file size limit error!\n");
+            return SYSTEM_ERROR;
+        }
 
-        if ( redirect(&inFd, &outFd, inFile, outFile) )
-        {
+        if (redirect(&inFd, &outFd, inFile, outFile)) {
             printf("redirect error!\n");
             return SYSTEM_ERROR;
         }
@@ -183,26 +183,22 @@ void my_alarm_handler(int x)
 int redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
 {
     *pInFd = open(inFile, O_RDONLY);
-    if ( *pInFd < 0 )
-    {
+    if (*pInFd < 0) {
         printf("inFd open error!\n%s\n",strerror(errno));
         return 1;
     }
     *pOutFd = open(outFile, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU | S_IRGRP | S_IROTH);
-    if ( *pOutFd < 0 )
-    {
+    if (*pOutFd < 0) {
         printf("outFd open error!\n%s\n", strerror(errno));
         return 1;
     }
 
     /*输入输出重定向*/
-    if ( dup2(*pOutFd, STDOUT_FILENO) < 0 )
-    {
+    if (dup2(*pOutFd, STDOUT_FILENO) < 0) {
         printf("outFd dup2 error!\n");
         return 1;
     }       
-    if ( dup2(*pInFd, STDIN_FILENO) < 0 )
-    {
+    if (dup2(*pInFd, STDIN_FILENO) < 0) {
         printf("inFd dup2 error!\n");
         return 1;
     }
@@ -212,13 +208,13 @@ int redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
 
 int status2result (int status)
 {
-    if ( WIFEXITED(status) )
+    if (WIFEXITED(status))
         return 0;
-    if ( status == SIGALRM || status == SIGXCPU )
+    if (status == SIGALRM || status == SIGXCPU)
         return TIME_LIMIT_EXCEED;
-    if ( status == SIGSEGV )
+    if (status == SIGSEGV)
         return MEM_LIMIT_EXCEED;
-    if ( status == SIGXFSZ )
+    if (status == SIGXFSZ)
         return OUTPUT_LIMIT_EXCEED;
     return RUNTIME_ERROR;
 
@@ -234,13 +230,16 @@ void printResult (int status, struct rusage childRusage)
 
     printf("=====================================================\n");
     printf("child exit status: %d\n", status);
-    if ( WIFEXITED(status) )
+    if (WIFEXITED(status)) {
         printf("exit normally.\n");
-    else
+    } else {
         printf("exit abnormally.\n");
-    if ( WIFSIGNALED(status) )
+    }
+    if (WIFSIGNALED(status)) {
         printf("exit by signal: %d | %d\n", status, WTERMSIG(status));
-    printf("child process time: %d ms\n", (int)passTime);
+    }
+
+    printf("child process time: %d ms\n", static_cast<int>(passTime));
     printf("maximum resident set size:\t%ld\n", childRusage.ru_maxrss);
     printf("integral shared memory size:\t%ld\n", childRusage.ru_ixrss);
     printf("integral unshared data size:\t%ld\n", childRusage.ru_idrss);
