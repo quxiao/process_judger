@@ -6,7 +6,8 @@ int main (int argc,  char** argv)
     for (int i = 0; i < MAX; i ++) {
         for (int j = 0; j < MAX; j++) {
             for (int k = 0; k < MAX; k++) {
-                i * j * k;
+                int tmp = i * j * k;
+                tmp += 1;
             }
         }
     }
