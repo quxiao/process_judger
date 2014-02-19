@@ -1,6 +1,6 @@
 #!/bin/sh
 
-function clear_and_exit()
+function clear_and_exit
 {
     cd $WORK_BASE
     make clean
