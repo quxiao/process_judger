@@ -1,4 +1,9 @@
 language: cpp
 
-script: ./build_and_test.sh
+before_script: 
+    - chmod +x build_and_test.sh
+    - chmod +x test/run.sh
+
+script: 
+    - ./build_and_test.sh
 
