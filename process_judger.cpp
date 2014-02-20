@@ -43,6 +43,7 @@ static int verbose_flag = 0;
 static struct option long_options[] =
 {
     /* These options set a flag. */
+    {"help",    no_argument,        0,              'h'},
     {"verbose", no_argument,        &verbose_flag,  1},
     {"input",   required_argument,  0,              'i'},
     {"output",  required_argument,  0,              'o'},
@@ -54,6 +55,7 @@ static struct option long_options[] =
 
 struct rlimit tLimit, mLimit, fileLimit, cldLimit, fsizeLimit, dataLimit;
 
+void print_help();
 int parse_arg(int argc, char** argv);
 void my_alarm_handler(int);
 int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmdLine);
@@ -63,11 +65,12 @@ void printResult(int status, struct rusage childRusage);
 
 /*
  *  @parameter
- *      -i input file path
- *      -o output file path
- *      -t process time(second) limit
- *      -m process memory(Mb) limit
- *      -c commend line as a string format
+ *      -h --help       print help
+ *      -i --input      input file path
+ *      -o --output     output file path
+ *      -t --time       process time(second) limit
+ *      -m --memory     process memory(Mb) limit
+ *      cmd args
  *
  *  @return
  *      PROCESS_RETURN_ENUM value
@@ -293,7 +296,7 @@ int parse_arg(int argc, char** argv)
     int option_index = 0;
 
     while (1) {
-        c = getopt_long (argc, argv, "i:o:t:m:c:",
+        c = getopt_long (argc, argv, "i:o:t:m:h",
             long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -305,27 +308,26 @@ int parse_arg(int argc, char** argv)
             /* If this option set a flag, do nothing else now. */
             if (long_options[option_index].flag != 0)
                 break;
-            printf ("option %s\n", long_options[option_index].name);
+            break;
+        case 'h':
+            print_help();
+            exit(0);
             break;
         case 'i':
-            printf("option: [%c], value: [%s]\n", c , optarg);
             input_file = optarg;
             break;
         case 'o':
-            printf("option: [%c], value: [%s]\n", c , optarg);
             output_file = optarg;
             break;
         case 't':
-            printf("option: [%c], value: [%s]\n", c , optarg);
             time_limit = atoi(optarg);
             break;
         case 'm':
-            printf("option: [%c], value: [%s]\n", c , optarg);
             mem_limit = atoi(optarg);
             break;
         case '?':
             /* getopt_long already printed an error message. */
-            break;
+            return -1;
         default:
             return -1;
         }
@@ -334,4 +336,21 @@ int parse_arg(int argc, char** argv)
 
     cmd_line = argv + optind;
     return 0;
+}
+
+void print_help()
+{
+    printf(
+        "This is a program which can run other process under some time and memory constraints.\n"
+        "Usage: ./process_judger [options] commend\n"
+        "options:\n"
+        "   -h --help       print help\n"
+        "   -i --input      input file path\n"
+        "   -o --output     output file path\n"
+        "   -t --time       process time(second) limit\n"
+        "   -m --memory     process memory(Mb) limit\n"
+        "\n"
+        "Example:\n"
+        "   ./process_judger -i input.data -i output.data -t 1 -m 4 ./my_exe\n"
+        );
 }
