@@ -12,13 +12,13 @@ EXCEPTED_RET_NAME="expected_return"
 
 if [ $# -ne $ARG_NUM ]; then
     echo "arg num($#) != $ARG_NUM"
-    echo "usage: sh run.sh test_dir_name\n"
+    echo "usage: sh run.sh test_dir_name"
     exit 1
 fi
 
 cd $1
 if [ $? -ne 0 ]; then
-    echo "cannot cd $1\n"
+    echo "cannot cd $1"
     exit 2
 fi
 

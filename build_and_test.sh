@@ -6,7 +6,7 @@ clear_and_exit ()
 {
     cd $WORK_BASE
     make clean
-    if [ -z $1 ]; then
+    if [ -n $1 ]; then
         exit $1
     else
         exit 0
