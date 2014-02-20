@@ -43,6 +43,9 @@ else
     exit 5
 fi
 
+# to prevent Permission denied
+touch $OUT_NAME
+
 ./$EXE_NAME $IN_NAME $OUT_NAME $TIME_LIMIT $MEM_LIMIT ./$TEST_EXE_NAME
 if [ "$?" -ne "$EXPECTED_RET" ]; then
     echo "ret($?) != expected return value($EXPECTED_RET)"
