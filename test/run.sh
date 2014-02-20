@@ -46,7 +46,7 @@ fi
 # to prevent Permission denied
 touch $OUT_NAME
 
-./$EXE_NAME $IN_NAME $OUT_NAME $TIME_LIMIT $MEM_LIMIT ./$TEST_EXE_NAME
+./$EXE_NAME -i $IN_NAME -o $OUT_NAME -t $TIME_LIMIT -m $MEM_LIMIT ./$TEST_EXE_NAME
 ACTURAL_RET="$?"
 if [ "$ACTURAL_RET" -ne "$EXPECTED_RET" ]; then
     echo "ret($ACTURAL_RET) != expected return value($EXPECTED_RET)"

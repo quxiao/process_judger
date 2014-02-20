@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
@@ -32,9 +33,28 @@ enum PROCESS_RETURN_ENUM
 #define FILE_NUM_LIMIT 6
 #define CHILD_NUM_LIMIT 0
 
+char* input_file = NULL;
+char* output_file = NULL;
+int time_limit = 1;
+int mem_limit = 0;
+char** cmd_line = NULL;
+
+static int verbose_flag = 0;
+static struct option long_options[] =
+{
+    /* These options set a flag. */
+    {"verbose", no_argument,        &verbose_flag,  1},
+    {"input",   required_argument,  0,              'i'},
+    {"output",  required_argument,  0,              'o'},
+    {"time",    required_argument,  0,              't'},
+    {"memory",  required_argument,  0,              'm'},
+    {"command", required_argument,  0,              'c'},
+    {0, 0, 0, 0}
+};
 
 struct rlimit tLimit, mLimit, fileLimit, cldLimit, fsizeLimit, dataLimit;
 
+int parse_arg(int argc, char** argv);
 void my_alarm_handler(int);
 int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmdLine);
 int redirect(int* inFd, int* outFd, char* inFile, char* outFile);
@@ -57,42 +77,47 @@ void printResult(int status, struct rusage childRusage);
 
 int main (int argc, char** argv)
 {
+    if (parse_arg(argc, argv) < 0) {
+        printf("parse_arg failed!\n");
+        return SYSTEM_ERROR;
+    }
+
+    /*
     if (argc < 6) {
         printf("argument number error!\n");
         printf("usage: inputFile outputFile timeLimt(%d~%ds) memoryLimit(%d~%dMb) commandLine\n", 
                 MIN_TIME_LIMIT, MAX_TIME_LIMIT, MIN_MEM_LIMIT, MAX_MEM_LIMIT);
         return SYSTEM_ERROR;
     }
-    int timeLimit = 0, memLimit = 0, ret = 0, tmpFd = 0;
-    timeLimit = atoi(argv[3]);  
-    if (timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT) {
+    */
+    int ret = 0, tmpFd = 0;
+    if (time_limit < MIN_TIME_LIMIT || time_limit > MAX_TIME_LIMIT) {
         printf("time limit argument error!(%d~%ds)\n", MIN_TIME_LIMIT, MAX_TIME_LIMIT);
         return SYSTEM_ERROR;
     }
-    memLimit = atoi(argv[4]);
-    if (memLimit < MIN_MEM_LIMIT || memLimit > MAX_MEM_LIMIT) {
+    if (mem_limit < MIN_MEM_LIMIT || mem_limit > MAX_MEM_LIMIT) {
         printf("memory limit argument error!(%d~%dMb)\n", MIN_MEM_LIMIT, MAX_MEM_LIMIT);
         return SYSTEM_ERROR;
     }
-    memLimit = memLimit * 1024 * 1024;
+    mem_limit = mem_limit * 1024 * 1024;
 
-    if ((tmpFd=open(argv[1], O_RDONLY)) == -1) {        //check input file
-        printf("input file doesn't exist!\n");
+    if ((tmpFd=open(input_file, O_RDONLY)) == -1) {        //check input file
+        printf("input file[%s] doesn't exist!\n", input_file);
         return SYSTEM_ERROR;
     }
     close(tmpFd);
-    if ((tmpFd=open(argv[2], O_RDWR | O_CREAT)) == -1) { //check output file
-        printf("output file can't be created!\n");
+    if ((tmpFd=open(output_file, O_RDWR | O_CREAT)) == -1) { //check output file
+        printf("output file[%s] can't be created!\n", output_file);
         return SYSTEM_ERROR;
     }
     close(tmpFd);
 
     ret = judge(
-            argv[1],        //input file 
-            argv[2],        //output file
-            timeLimit, 
-            memLimit,
-            argv+5);        //command line
+            input_file,
+            output_file,
+            time_limit, 
+            mem_limit,
+            cmd_line);
 
     return ret;
 
@@ -259,4 +284,54 @@ void printResult (int status, struct rusage childRusage)
     printf("voluntary context switches:\t%ld\n", childRusage.ru_nvcsw);
     printf("involuntary context switches:\t%ld\n", childRusage.ru_nivcsw);
     printf("===================================================\n\n");
+}
+
+
+int parse_arg(int argc, char** argv)
+{
+    int c;
+    int option_index = 0;
+
+    while (1) {
+        c = getopt_long (argc, argv, "i:o:t:m:c:",
+            long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1)
+            break;
+
+        switch (c) {
+        case 0:
+            /* If this option set a flag, do nothing else now. */
+            if (long_options[option_index].flag != 0)
+                break;
+            printf ("option %s\n", long_options[option_index].name);
+            break;
+        case 'i':
+            printf("option: [%c], value: [%s]\n", c , optarg);
+            input_file = optarg;
+            break;
+        case 'o':
+            printf("option: [%c], value: [%s]\n", c , optarg);
+            output_file = optarg;
+            break;
+        case 't':
+            printf("option: [%c], value: [%s]\n", c , optarg);
+            time_limit = atoi(optarg);
+            break;
+        case 'm':
+            printf("option: [%c], value: [%s]\n", c , optarg);
+            mem_limit = atoi(optarg);
+            break;
+        case '?':
+            /* getopt_long already printed an error message. */
+            break;
+        default:
+            return -1;
+        }
+
+    }
+
+    cmd_line = argv + optind;
+    return 0;
 }
