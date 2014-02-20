@@ -11,12 +11,16 @@
 #include <fcntl.h>
 #include <signal.h>
 
-//#define   ACCEPTED            1
-#define TIME_LIMIT_EXCEED   3
-#define MEM_LIMIT_EXCEED    4
-#define RUNTIME_ERROR       5
-#define OUTPUT_LIMIT_EXCEED 7       /*可以考虑如何在进程运行时进行限制*/
-#define SYSTEM_ERROR        10
+enum PROCESS_RETURN_ENUM
+{
+    NOMRAL_RETURN = 0,
+    TIME_LIMIT_EXCEED,
+    MEM_LIMIT_EXCEED,
+    RUNTIME_ERROR,
+    OUTPUT_LIMIT_EXCEED,
+    SYSTEM_ERROR
+};
+
 
 //time和memory参数的范围
 #define MIN_TIME_LIMIT 1
@@ -28,7 +32,6 @@
 #define FILE_NUM_LIMIT 6
 #define CHILD_NUM_LIMIT 0
 
-#define MY_DEBUG    1
 
 struct rlimit tLimit, mLimit, fileLimit, cldLimit, fsizeLimit, dataLimit;
 
@@ -39,17 +42,19 @@ int status2result(int status);
 void printResult(int status, struct rusage childRusage);
 
 /*
-    参数1:输入文件绝对路径
-    参数2:生成的输出文件
-    参数3:时间限制(以s为单位)
-    参数4:内存限制(以Mb为单位)
-    参数5...:所执行程序命令行
-    TODO use options, -i -o -t -m -c
-
-    返回值：
-    正常     0
-    异常     TIME_LIMIT_EXCEED / MEM_LIMIT_EXCEED / RUNTIME_ERROR / SYSTEM_ERROR / OUTPUT_LIMIT_EXCEED   
+ *  @parameter
+ *      -i input file path
+ *      -o output file path
+ *      -t process time(second) limit
+ *      -m process memory(Mb) limit
+ *      -c commend line as a string format
+ *
+ *  @return
+ *      PROCESS_RETURN_ENUM value
+ *      NORMAL_RETURN(0), or
+ *      TIME_LIMIT_EXCEED(2) / MEM_LIMIT_EXCEED(3) / RUNTIME_ERROR(4) / OUTPUT_LIMIT_EXCEED(5) / SYSTEM_ERROR(6) 
  */
+
 int main (int argc, char** argv)
 {
     if (argc < 6) {
@@ -209,15 +214,14 @@ int redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
 int status2result (int status)
 {
     if (WIFEXITED(status))
-        return 0;
-    if (status == SIGALRM || status == SIGXCPU)
+        return NOMRAL_RETURN;
+    if (SIGALRM == status ||SIGXCPU == status)
         return TIME_LIMIT_EXCEED;
-    if (status == SIGSEGV)
+    if (SIGSEGV == status)
         return MEM_LIMIT_EXCEED;
-    if (status == SIGXFSZ)
+    if (SIGXFSZ == status)
         return OUTPUT_LIMIT_EXCEED;
     return RUNTIME_ERROR;
-
 }
 
 void printResult (int status, struct rusage childRusage)
