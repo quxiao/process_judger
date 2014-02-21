@@ -6,7 +6,7 @@ EXE_NAME="process_judger"
 IN_NAME="input.data"
 OUT_NAME="output.data"
 TIME_LIMIT=1
-MEM_LIMIT=4
+MEM_LIMIT=128
 TEST_EXE_NAME="test_exe"
 EXCEPTED_RET_NAME="expected_return"
 

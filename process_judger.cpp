@@ -129,7 +129,6 @@ int main (int argc, char** argv)
 
 int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
 {
-    int i;
 #ifdef  MY_DEBUG
     printf("input file: %s\n", inFile);
     printf("output file: %s\n", outFile);
