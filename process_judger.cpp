@@ -1,75 +1,20 @@
-#include <process_judger.h>
+#include "process_judger.h"
 
-/*
- *  @parameter
- *      -h --help       print help
- *      -i --input      input file path
- *      -o --output     output file path
- *      -t --time       process time(second) limit
- *      -m --memory     process memory(Mb) limit
- *      cmd args
- *
- *  @return
- *      PROCESS_RETURN_ENUM value
- *      NORMAL_RETURN(0), or
- *      TIME_LIMIT_EXCEED(2) / MEM_LIMIT_EXCEED(3) / RUNTIME_ERROR(4) / OUTPUT_LIMIT_EXCEED(5) / SYSTEM_ERROR(6) 
- */
 
-int main (int argc, char** argv)
+int ProcessJudger::judge ()
 {
-    /*
-    if (parse_arg(argc, argv) < 0) {
-        printf("parse_arg failed!\n");
-        return SYSTEM_ERROR;
+    if (verbose_flag) {
+        printf("input file: %s\n", input_file);
+        printf("output file: %s\n", output_file);
+        printf("time limit: %d\n", time_limit);
+        printf("memory limit: %d\n", mem_limit);
+        printf("cmd: ");
+        if (cmd_line) {
+            for (int i = 0; cmd_line[i] != NULL; i ++)
+                printf("%s ", cmd_line[i]);
+            printf("\n");
+        }
     }
-
-    int ret = 0, tmpFd = 0;
-    if (time_limit < MIN_TIME_LIMIT || time_limit > MAX_TIME_LIMIT) {
-        printf("time limit argument error!(%d~%ds)\n", MIN_TIME_LIMIT, MAX_TIME_LIMIT);
-        return SYSTEM_ERROR;
-    }
-    if (mem_limit < MIN_MEM_LIMIT || mem_limit > MAX_MEM_LIMIT) {
-        printf("memory limit argument error!(%d~%dMb)\n", MIN_MEM_LIMIT, MAX_MEM_LIMIT);
-        return SYSTEM_ERROR;
-    }
-    mem_limit = mem_limit * 1024 * 1024;
-
-    if ((tmpFd=open(input_file, O_RDONLY)) == -1) {        //check input file
-        printf("input file[%s] doesn't exist!\n", input_file);
-        return SYSTEM_ERROR;
-    }
-    close(tmpFd);
-    if ((tmpFd=open(output_file, O_RDWR | O_CREAT)) == -1) { //check output file
-        printf("output file[%s] can't be created!\n", output_file);
-        return SYSTEM_ERROR;
-    }
-    close(tmpFd);
-
-    ret = judge(
-            input_file,
-            output_file,
-            time_limit, 
-            mem_limit,
-            cmd_line);
-
-    return ret;
-    */
-
-}
-
-
-int ProcessJudger::judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
-{
-#ifdef  MY_DEBUG
-    printf("input file: %s\n", inFile);
-    printf("output file: %s\n", outFile);
-    printf("time limit: %d\n", timeLimit);
-    printf("memory limit: %d\n", memLimit);
-    printf("cmd: ");
-    for (i = 0; cmd[i] != NULL; i ++)
-        printf("%s ", cmd[i]);
-    printf("\n");
-#endif
     pid_t pid;
     int s;
     struct rusage childRusage;
@@ -79,7 +24,7 @@ int ProcessJudger::judge (char* inFile, char* outFile, int timeLimit, int memLim
         printf("fork error!\n");
         return SYSTEM_ERROR;
     }
-    else if ( pid == 0 ) {       /*child process*/
+    else if (pid == 0) {       /*child process*/
         getrlimit(RLIMIT_CPU, &tLimit);
         getrlimit(RLIMIT_AS, &mLimit);
         getrlimit(RLIMIT_NOFILE, &fileLimit);
@@ -89,8 +34,8 @@ int ProcessJudger::judge (char* inFile, char* outFile, int timeLimit, int memLim
 
 //      printf("file size: %d\n", fsizeLimit.rlim_cur);
 //      printf("data limit:%d\n", dataLimit.rlim_cur);
-        tLimit.rlim_cur = timeLimit;
-        mLimit.rlim_cur = memLimit;
+        tLimit.rlim_cur = time_limit;
+        mLimit.rlim_cur = mem_limit;
         fileLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_NUM_LIMIT;
         cldLimit.rlim_cur = PROCESS_CONSTRAINT::CHILD_NUM_LIMIT;
         fsizeLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_SIZE_LIMIT;
@@ -116,16 +61,16 @@ int ProcessJudger::judge (char* inFile, char* outFile, int timeLimit, int memLim
             return SYSTEM_ERROR;
         }
 
-        if (redirect(&inFd, &outFd, inFile, outFile)) {
+        if (redirect(&inFd, &outFd, input_file, output_file)) {
             printf("redirect error!\n");
             return SYSTEM_ERROR;
         }
 
         /*因为程序中的sleep()不计入进程时间，所以用信号作为辅助超时判断*/
         signal(SIGALRM, my_alarm_handler);
-        alarm(timeLimit * 2);   /*为了能与真正超时区别开来，故设置为时限的两倍*/
+        alarm(time_limit * 2);   /*为了能与真正超时区别开来，故设置为时限的两倍*/
 
-        execvp(cmd[0], cmd);
+        execvp(cmd_line[0], cmd_line);
     }
     else
     {
@@ -186,7 +131,8 @@ void ProcessJudger::printResult (int status, struct rusage childRusage)
 {
     double passTime;
 
-    passTime = (childRusage.ru_utime.tv_sec + childRusage.ru_stime.tv_sec) * 1000 + (float)(childRusage.ru_stime.tv_usec + childRusage.ru_utime.tv_usec) / 1000;
+    passTime = (childRusage.ru_utime.tv_sec + childRusage.ru_stime.tv_sec) * 1000 
+                + (float)(childRusage.ru_stime.tv_usec + childRusage.ru_utime.tv_usec) / 1000;
     printf("time: %d ms\n", (int)passTime);
     printf("memory: %lu kb\n", childRusage.ru_maxrss);
 
@@ -265,6 +211,31 @@ int ProcessJudger::parse_arg(int argc, char** argv)
     }
 
     cmd_line = argv + optind;
+
+    //check arg
+    if (time_limit < PROCESS_CONSTRAINT::MIN_TIME_LIMIT || 
+        time_limit > PROCESS_CONSTRAINT::MAX_TIME_LIMIT) {
+        printf("time limit argument error!(%d~%ds)\n", PROCESS_CONSTRAINT::MIN_TIME_LIMIT, PROCESS_CONSTRAINT::MAX_TIME_LIMIT);
+        return SYSTEM_ERROR;
+    }
+    if (mem_limit < PROCESS_CONSTRAINT::MIN_MEM_LIMIT || mem_limit > PROCESS_CONSTRAINT::MAX_MEM_LIMIT) {
+        printf("memory limit argument error!(%d~%dMb)\n", PROCESS_CONSTRAINT::MIN_MEM_LIMIT, PROCESS_CONSTRAINT::MAX_MEM_LIMIT);
+        return SYSTEM_ERROR;
+    }
+    mem_limit = mem_limit * 1024 * 1024;
+
+    int tmp_fd = NULL;
+    if ((tmp_fd=open(input_file, O_RDONLY)) == -1) {        //check input file
+        printf("input file[%s] doesn't exist!\n", input_file);
+        return SYSTEM_ERROR;
+    }
+    close(tmp_fd);
+    if ((tmp_fd=open(output_file, O_RDWR | O_CREAT)) == -1) { //check output file
+        printf("output file[%s] can't be created!\n", output_file);
+        return SYSTEM_ERROR;
+    }
+    close(tmp_fd);
+
     return 0;
 }
 

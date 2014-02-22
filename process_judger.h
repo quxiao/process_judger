@@ -25,11 +25,8 @@ public:
 
     ~ProcessJudger() {}
 
-    static void print_help();
-    static void my_alarm_handler(int);
     int parse_arg(int argc, char** argv);
-    int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmdLine);
-    void printResult(int status, struct rusage childRusage);
+    int judge ();
 
 private:
     ProcessJudger(const ProcessJudger&);
@@ -44,6 +41,10 @@ private:
     int time_limit;
     int mem_limit;
     char** cmd_line;
+
+    static void print_help();
+    static void my_alarm_handler(int);
+    void printResult(int status, struct rusage childRusage);
 
     struct PROCESS_CONSTRAINT
     {

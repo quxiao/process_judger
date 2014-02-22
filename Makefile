@@ -1,8 +1,8 @@
-CC = gcc
+CC = g++
 CXXFLAGS = -g -fPIC -Wall
 CPPFLAGS = -D_GNU_SOURCE
 INCLUDE = -I.
-FILES = process_judger.cpp
+FILES = process_judger.cpp main.cpp
 OUT_EXE = process_judger
 
 process_judger: $(FILES)
