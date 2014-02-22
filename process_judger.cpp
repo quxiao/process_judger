@@ -1,67 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <getopt.h>
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <signal.h>
-
-enum PROCESS_RETURN_ENUM
-{
-    NOMRAL_RETURN = 0,
-    TIME_LIMIT_EXCEED,
-    MEM_LIMIT_EXCEED,
-    RUNTIME_ERROR,
-    OUTPUT_LIMIT_EXCEED,
-    SYSTEM_ERROR
-};
-
-
-//time和memory参数的范围
-#define MIN_TIME_LIMIT 1
-#define MAX_TIME_LIMIT 100
-#define MIN_MEM_LIMIT 4
-#define MAX_MEM_LIMIT 1024
-
-#define FILE_SIZE_LIMIT (20 * 1024 * 1024)
-#define FILE_NUM_LIMIT 6
-#define CHILD_NUM_LIMIT 0
-
-char* input_file = NULL;
-char* output_file = NULL;
-int time_limit = 1;
-int mem_limit = 0;
-char** cmd_line = NULL;
-
-static int verbose_flag = 0;
-static struct option long_options[] =
-{
-    /* These options set a flag. */
-    {"help",    no_argument,        0,              'h'},
-    {"verbose", no_argument,        &verbose_flag,  1},
-    {"input",   required_argument,  0,              'i'},
-    {"output",  required_argument,  0,              'o'},
-    {"time",    required_argument,  0,              't'},
-    {"memory",  required_argument,  0,              'm'},
-    {"command", required_argument,  0,              'c'},
-    {0, 0, 0, 0}
-};
-
-struct rlimit tLimit, mLimit, fileLimit, cldLimit, fsizeLimit, dataLimit;
-
-void print_help();
-int parse_arg(int argc, char** argv);
-void my_alarm_handler(int);
-int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmdLine);
-int redirect(int* inFd, int* outFd, char* inFile, char* outFile);
-int status2result(int status);
-void printResult(int status, struct rusage childRusage);
+#include <process_judger.h>
 
 /*
  *  @parameter
@@ -80,19 +17,12 @@ void printResult(int status, struct rusage childRusage);
 
 int main (int argc, char** argv)
 {
+    /*
     if (parse_arg(argc, argv) < 0) {
         printf("parse_arg failed!\n");
         return SYSTEM_ERROR;
     }
 
-    /*
-    if (argc < 6) {
-        printf("argument number error!\n");
-        printf("usage: inputFile outputFile timeLimt(%d~%ds) memoryLimit(%d~%dMb) commandLine\n", 
-                MIN_TIME_LIMIT, MAX_TIME_LIMIT, MIN_MEM_LIMIT, MAX_MEM_LIMIT);
-        return SYSTEM_ERROR;
-    }
-    */
     int ret = 0, tmpFd = 0;
     if (time_limit < MIN_TIME_LIMIT || time_limit > MAX_TIME_LIMIT) {
         printf("time limit argument error!(%d~%ds)\n", MIN_TIME_LIMIT, MAX_TIME_LIMIT);
@@ -123,11 +53,12 @@ int main (int argc, char** argv)
             cmd_line);
 
     return ret;
+    */
 
 }
 
 
-int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
+int ProcessJudger::judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
 {
 #ifdef  MY_DEBUG
     printf("input file: %s\n", inFile);
@@ -160,9 +91,9 @@ int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
 //      printf("data limit:%d\n", dataLimit.rlim_cur);
         tLimit.rlim_cur = timeLimit;
         mLimit.rlim_cur = memLimit;
-        fileLimit.rlim_cur = FILE_NUM_LIMIT;
-        cldLimit.rlim_cur = CHILD_NUM_LIMIT;
-        fsizeLimit.rlim_cur = FILE_SIZE_LIMIT;
+        fileLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_NUM_LIMIT;
+        cldLimit.rlim_cur = PROCESS_CONSTRAINT::CHILD_NUM_LIMIT;
+        fsizeLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_SIZE_LIMIT;
 
         if (setrlimit(RLIMIT_CPU, &tLimit) == -1) {     /*时间限制*/
             printf("setrlimit time limit error!\n");
@@ -207,12 +138,12 @@ int judge (char* inFile, char* outFile, int timeLimit, int memLimit, char** cmd)
     return 0;
 }
 
-void my_alarm_handler(int x)
+void ProcessJudger::my_alarm_handler(int x)
 {
     printf("time out!\n");
 }
 
-int redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
+int ProcessJudger::redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
 {
     *pInFd = open(inFile, O_RDONLY);
     if (*pInFd < 0) {
@@ -238,7 +169,7 @@ int redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
     return 0;
 }
 
-int status2result (int status)
+int ProcessJudger::status2result (int status)
 {
     if (WIFEXITED(status))
         return NOMRAL_RETURN;
@@ -251,7 +182,7 @@ int status2result (int status)
     return RUNTIME_ERROR;
 }
 
-void printResult (int status, struct rusage childRusage)
+void ProcessJudger::printResult (int status, struct rusage childRusage)
 {
     double passTime;
 
@@ -289,7 +220,7 @@ void printResult (int status, struct rusage childRusage)
 }
 
 
-int parse_arg(int argc, char** argv)
+int ProcessJudger::parse_arg(int argc, char** argv)
 {
     int c;
     int option_index = 0;
@@ -337,7 +268,7 @@ int parse_arg(int argc, char** argv)
     return 0;
 }
 
-void print_help()
+void ProcessJudger::print_help()
 {
     printf(
         "This is a program which can run other process under some time and memory constraints.\n"
@@ -353,3 +284,17 @@ void print_help()
         "   ./process_judger -i input.data -i output.data -t 1 -m 4 ./my_exe\n"
         );
 }
+
+int ProcessJudger::verbose_flag = 0;
+const struct option ProcessJudger::long_options[] =
+{
+    {"help",    no_argument,        0,              'h'},
+    {"verbose", no_argument,        &verbose_flag,  1},
+    {"input",   required_argument,  0,              'i'},
+    {"output",  required_argument,  0,              'o'},
+    {"time",    required_argument,  0,              't'},
+    {"memory",  required_argument,  0,              'm'},
+    {"command", required_argument,  0,              'c'},
+    {0, 0, 0, 0}
+};
+
