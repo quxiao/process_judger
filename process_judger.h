@@ -16,35 +16,35 @@ class ProcessJudger
 {
 public:
     ProcessJudger():
-        input_file(NULL),
-        output_file(NULL),
-        time_limit(1),
-        mem_limit(128),
-        cmd_line(NULL)
+        input_file_(NULL),
+        output_file_(NULL),
+        time_limit_(1),
+        mem_limit_(128),
+        cmd_line_(NULL)
     {}
 
     ~ProcessJudger() {}
 
-    int parse_arg(int argc, char** argv);
-    int judge ();
+    int ParseArg(int argc, char** argv);
+    int Judge();
 
 private:
     ProcessJudger(const ProcessJudger&);
     ProcessJudger& operator=(const ProcessJudger& rhs);
 
-    int status2result(int status);
-    int redirect(int* inFd, int* outFd, char* inFile, char* outFile);
+    int StatusToResult(int status);
+    int Redirect(int* inFd, int* outFd, char* inFile, char* outFile);
 
-    struct rlimit tLimit, mLimit, fileLimit, cldLimit, fsizeLimit, dataLimit;
-    char* input_file;
-    char* output_file;
-    int time_limit;
-    int mem_limit;
-    char** cmd_line;
+    struct rlimit t_limit_, m_limit_, file_limit_, cld_limit_, fsize_limit_, data_limit_;
+    char* input_file_;
+    char* output_file_;
+    int time_limit_;
+    int mem_limit_;
+    char** cmd_line_;
 
-    static void print_help();
-    static void my_alarm_handler(int);
-    void printResult(int status, struct rusage childRusage);
+    static void PrintHelp();
+    static void VoidHandler(int);
+    void PrintResult(int status, struct rusage childRusage);
 
     struct PROCESS_CONSTRAINT
     {
@@ -67,6 +67,6 @@ private:
         SYSTEM_ERROR
     };
 
-    static int verbose_flag;
+    static int verbose_flag_;
     const static struct option long_options[];
 };

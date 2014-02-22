@@ -1,17 +1,17 @@
 #include "process_judger.h"
 
 
-int ProcessJudger::judge ()
+int ProcessJudger::Judge()
 {
-    if (verbose_flag) {
-        printf("input file: %s\n", input_file);
-        printf("output file: %s\n", output_file);
-        printf("time limit: %d\n", time_limit);
-        printf("memory limit: %d\n", mem_limit);
+    if (verbose_flag_) {
+        printf("input file: %s\n", input_file_);
+        printf("output file: %s\n", output_file_);
+        printf("time limit: %d\n", time_limit_);
+        printf("memory limit: %d\n", mem_limit_);
         printf("cmd: ");
-        if (cmd_line) {
-            for (int i = 0; cmd_line[i] != NULL; i ++)
-                printf("%s ", cmd_line[i]);
+        if (cmd_line_) {
+            for (int i = 0; cmd_line_[i] != NULL; i ++)
+                printf("%s ", cmd_line_[i]);
             printf("\n");
         }
     }
@@ -25,70 +25,70 @@ int ProcessJudger::judge ()
         return SYSTEM_ERROR;
     }
     else if (pid == 0) {       /*child process*/
-        getrlimit(RLIMIT_CPU, &tLimit);
-        getrlimit(RLIMIT_AS, &mLimit);
-        getrlimit(RLIMIT_NOFILE, &fileLimit);
-        getrlimit(RLIMIT_NPROC, &cldLimit);
-        getrlimit(RLIMIT_DATA, &dataLimit);
-        getrlimit(RLIMIT_FSIZE, &fsizeLimit);
+        getrlimit(RLIMIT_CPU, &t_limit_);
+        getrlimit(RLIMIT_AS, &m_limit_);
+        getrlimit(RLIMIT_NOFILE, &file_limit_);
+        getrlimit(RLIMIT_NPROC, &cld_limit_);
+        getrlimit(RLIMIT_DATA, &data_limit_);
+        getrlimit(RLIMIT_FSIZE, &fsize_limit_);
 
-//      printf("file size: %d\n", fsizeLimit.rlim_cur);
-//      printf("data limit:%d\n", dataLimit.rlim_cur);
-        tLimit.rlim_cur = time_limit;
-        mLimit.rlim_cur = mem_limit;
-        fileLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_NUM_LIMIT;
-        cldLimit.rlim_cur = PROCESS_CONSTRAINT::CHILD_NUM_LIMIT;
-        fsizeLimit.rlim_cur = PROCESS_CONSTRAINT::FILE_SIZE_LIMIT;
+//      printf("file size: %d\n", fsize_limit_.rlim_cur);
+//      printf("data limit:%d\n", data_limit_.rlim_cur);
+        t_limit_.rlim_cur = time_limit_;
+        m_limit_.rlim_cur = mem_limit_;
+        file_limit_.rlim_cur = PROCESS_CONSTRAINT::FILE_NUM_LIMIT;
+        cld_limit_.rlim_cur = PROCESS_CONSTRAINT::CHILD_NUM_LIMIT;
+        fsize_limit_.rlim_cur = PROCESS_CONSTRAINT::FILE_SIZE_LIMIT;
 
-        if (setrlimit(RLIMIT_CPU, &tLimit) == -1) {     /*时间限制*/
+        if (setrlimit(RLIMIT_CPU, &t_limit_) == -1) {     /*时间限制*/
             printf("setrlimit time limit error!\n");
             return SYSTEM_ERROR;
         }
-        if (setrlimit(RLIMIT_AS, &mLimit) == -1) {     /*内存限制*/
+        if (setrlimit(RLIMIT_AS, &m_limit_) == -1) {     /*内存限制*/
             printf("setrlimit memory limit error!\n");
             return SYSTEM_ERROR;
         }
-        if (setrlimit(RLIMIT_NOFILE, &fileLimit) == -1) {
+        if (setrlimit(RLIMIT_NOFILE, &file_limit_) == -1) {
             printf("setrlimit file num limit error!\n");
             return SYSTEM_ERROR;
         }
-        if (setrlimit(RLIMIT_NPROC, &cldLimit) == -1) {
+        if (setrlimit(RLIMIT_NPROC, &cld_limit_) == -1) {
             printf("setrlimit child process num limit error!\n");
             return SYSTEM_ERROR;
         }
-        if (setrlimit(RLIMIT_FSIZE, &fsizeLimit) == -1)  {
+        if (setrlimit(RLIMIT_FSIZE, &fsize_limit_) == -1)  {
             printf("setrlimti file size limit error!\n");
             return SYSTEM_ERROR;
         }
 
-        if (redirect(&inFd, &outFd, input_file, output_file)) {
+        if (Redirect(&inFd, &outFd, input_file_, output_file_)) {
             printf("redirect error!\n");
             return SYSTEM_ERROR;
         }
 
         /*因为程序中的sleep()不计入进程时间，所以用信号作为辅助超时判断*/
-        signal(SIGALRM, my_alarm_handler);
-        alarm(time_limit * 2);   /*为了能与真正超时区别开来，故设置为时限的两倍*/
+        signal(SIGALRM, VoidHandler);
+        alarm(time_limit_ * 2);   /*为了能与真正超时区别开来，故设置为时限的两倍*/
 
-        execvp(cmd_line[0], cmd_line);
+        execvp(cmd_line_[0], cmd_line_);
     }
     else
     {
         waitpid(pid, &s, 0);
         getrusage(RUSAGE_CHILDREN, &childRusage);
-        printResult(s, childRusage);
-        return status2result(s);
+        PrintResult(s, childRusage);
+        return StatusToResult(s);
     }
 
     return 0;
 }
 
-void ProcessJudger::my_alarm_handler(int x)
+void ProcessJudger::VoidHandler(int x)
 {
     printf("time out!\n");
 }
 
-int ProcessJudger::redirect (int* pInFd, int* pOutFd, char* inFile, char* outFile)
+int ProcessJudger::Redirect(int* pInFd, int* pOutFd, char* inFile, char* outFile)
 {
     *pInFd = open(inFile, O_RDONLY);
     if (*pInFd < 0) {
@@ -114,7 +114,7 @@ int ProcessJudger::redirect (int* pInFd, int* pOutFd, char* inFile, char* outFil
     return 0;
 }
 
-int ProcessJudger::status2result (int status)
+int ProcessJudger::StatusToResult(int status)
 {
     if (WIFEXITED(status))
         return NOMRAL_RETURN;
@@ -127,7 +127,7 @@ int ProcessJudger::status2result (int status)
     return RUNTIME_ERROR;
 }
 
-void ProcessJudger::printResult (int status, struct rusage childRusage)
+void ProcessJudger::PrintResult (int status, struct rusage childRusage)
 {
     double passTime;
 
@@ -166,7 +166,7 @@ void ProcessJudger::printResult (int status, struct rusage childRusage)
 }
 
 
-int ProcessJudger::parse_arg(int argc, char** argv)
+int ProcessJudger::ParseArg(int argc, char** argv)
 {
     int c;
     int option_index = 0;
@@ -186,20 +186,20 @@ int ProcessJudger::parse_arg(int argc, char** argv)
                 break;
             break;
         case 'h':
-            print_help();
+            PrintHelp();
             exit(0);
             break;
         case 'i':
-            input_file = optarg;
+            input_file_ = optarg;
             break;
         case 'o':
-            output_file = optarg;
+            output_file_ = optarg;
             break;
         case 't':
-            time_limit = atoi(optarg);
+            time_limit_ = atoi(optarg);
             break;
         case 'm':
-            mem_limit = atoi(optarg);
+            mem_limit_ = atoi(optarg);
             break;
         case '?':
             /* getopt_long already printed an error message. */
@@ -210,28 +210,28 @@ int ProcessJudger::parse_arg(int argc, char** argv)
 
     }
 
-    cmd_line = argv + optind;
+    cmd_line_ = argv + optind;
 
     //check arg
-    if (time_limit < PROCESS_CONSTRAINT::MIN_TIME_LIMIT || 
-        time_limit > PROCESS_CONSTRAINT::MAX_TIME_LIMIT) {
+    if (time_limit_ < PROCESS_CONSTRAINT::MIN_TIME_LIMIT || 
+        time_limit_ > PROCESS_CONSTRAINT::MAX_TIME_LIMIT) {
         printf("time limit argument error!(%d~%ds)\n", PROCESS_CONSTRAINT::MIN_TIME_LIMIT, PROCESS_CONSTRAINT::MAX_TIME_LIMIT);
         return SYSTEM_ERROR;
     }
-    if (mem_limit < PROCESS_CONSTRAINT::MIN_MEM_LIMIT || mem_limit > PROCESS_CONSTRAINT::MAX_MEM_LIMIT) {
+    if (mem_limit_ < PROCESS_CONSTRAINT::MIN_MEM_LIMIT || mem_limit_ > PROCESS_CONSTRAINT::MAX_MEM_LIMIT) {
         printf("memory limit argument error!(%d~%dMb)\n", PROCESS_CONSTRAINT::MIN_MEM_LIMIT, PROCESS_CONSTRAINT::MAX_MEM_LIMIT);
         return SYSTEM_ERROR;
     }
-    mem_limit = mem_limit * 1024 * 1024;
+    mem_limit_ = mem_limit_ * 1024 * 1024;
 
     int tmp_fd = NULL;
-    if ((tmp_fd=open(input_file, O_RDONLY)) == -1) {        //check input file
-        printf("input file[%s] doesn't exist!\n", input_file);
+    if ((tmp_fd=open(input_file_, O_RDONLY)) == -1) {        //check input file
+        printf("input file[%s] doesn't exist!\n", input_file_);
         return SYSTEM_ERROR;
     }
     close(tmp_fd);
-    if ((tmp_fd=open(output_file, O_RDWR | O_CREAT)) == -1) { //check output file
-        printf("output file[%s] can't be created!\n", output_file);
+    if ((tmp_fd=open(output_file_, O_RDWR | O_CREAT)) == -1) { //check output file
+        printf("output file[%s] can't be created!\n", output_file_);
         return SYSTEM_ERROR;
     }
     close(tmp_fd);
@@ -239,7 +239,7 @@ int ProcessJudger::parse_arg(int argc, char** argv)
     return 0;
 }
 
-void ProcessJudger::print_help()
+void ProcessJudger::PrintHelp()
 {
     printf(
         "This is a program which can run other process under some time and memory constraints.\n"
@@ -256,11 +256,11 @@ void ProcessJudger::print_help()
         );
 }
 
-int ProcessJudger::verbose_flag = 0;
+int ProcessJudger::verbose_flag_ = 0;
 const struct option ProcessJudger::long_options[] =
 {
     {"help",    no_argument,        0,              'h'},
-    {"verbose", no_argument,        &verbose_flag,  1},
+    {"verbose", no_argument,        &verbose_flag_,  1},
     {"input",   required_argument,  0,              'i'},
     {"output",  required_argument,  0,              'o'},
     {"time",    required_argument,  0,              't'},

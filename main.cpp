@@ -18,10 +18,10 @@
 int main (int argc, char** argv)
 {
     ProcessJudger judger;
-    if (judger.parse_arg(argc, argv)) {
-        printf("parse_arg failed!\n");
+    if (judger.ParseArg(argc, argv)) {
+        printf("ParseArg failed!\n");
         return -1;
     }
 
-    return judger.judge();
+    return judger.Judge();
 }
