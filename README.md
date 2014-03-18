@@ -17,4 +17,4 @@ A program which can run other process under some time and memory constraints. It
 
 ## Example
     
-    ./process_judger -i input.data -i output.data -t 1 -m 4 ./my_exe
+    ./process_judger -i input.data -i output.data -t 1 -m 16 ./my_exe
